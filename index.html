@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+
+
+<head>
+	<meta charset="utf-8">
+	<title>Robot L3 - Novembre 2021</title>
+
+
+
+	<script type="text/javascript" charset="utf-8">
+
+		var distances = null; // dernières mesures de distances
+		var dist=null;
+
+		window.onload = afficher_distances // fonction lancée après le chargement de la page
+
+		function cmd(c) {
+			//console.log("cmd = "+JSON.stringify(c))
+			fetch("cmd", {
+				method: "POST",
+				headers: {
+					'Content-Type': 'application/json'
+				},
+
+				body: JSON.stringify({
+					cmd: c
+				})
+			}).then(res => res.json())
+			.then(res => {
+				console.log("message = "+res.mess)
+				//distances = res.dist;
+			})
+
+		}
+
+
+		// setTimeout(() => {
+		// 	check()
+		// }, 1000);
+
+		// function check() {
+		// 	cmd('nop')
+		// 	setTimeout(() => {
+		// 		check()
+		// 	}, 1000);
+
+		// }
+
+		function incr(id,val) {
+			var v = parseInt(document.getElementById(id).value)
+			v += val
+			document.getElementById(id).value = v
+		}
+
+		function afficher_distances() {
+			// la fonction est exécutée chaque seconde
+			setTimeout(() => {
+				if (document.getElementById("dist_on").checked) {
+					fetch("distances", {
+						method: "POST",
+						headers: {
+							'Content-Type': 'application/json'
+						},
+
+					}).then(res => res.json())
+					.then(res => {
+						if (res.dist == null) {
+							document.getElementById("distances").innerHTML = ""
+						}
+						else {
+							document.getElementById("distances").innerHTML = 
+								JSON.stringify(res.dist)
+							//distances=JSON.stringify(res.dist)
+							dist=JSON.stringify(res.dist)
+						}
+						
+
+					})
+				}
+				else {
+					document.getElementById("distances").innerHTML = ""
+				}
+				afficher_distances()
+			}, 1000)
+		}
+
+		//////////////////////////// avancer ////////////////////////
+
+		function avancer(vitesse,duree) {
+			var lcmd = [
+				"[[mga <vitesse>][mda <vitesse>][t <duree>]]",
+				"[[t 1000]]",
+			]
+
+			lcmd[0] = lcmd[0].replace(/<vitesse>/g, vitesse)
+			lcmd[0] = lcmd[0].replace(/<duree>/g, duree)
+
+			cmd(lcmd)
+		}
+
+		//////////////////////////// reculer ////////////////////////
+
+		function reculer(vitesse,duree) {
+			var lcmd = [
+				"[[mgr <vitesse>][mdr <vitesse>][t <duree>]]",
+				"[[t 1000]]",
+			]
+
+			lcmd[0] = lcmd[0].replace(/<vitesse>/g, vitesse)
+			lcmd[0] = lcmd[0].replace(/<duree>/g, duree)
+
+			cmd(lcmd)
+		}
+
+		//////////////////////////// tourner_gauche ////////////////////////
+
+		function tourner_gauche(vitesse,duree) {
+			var lcmd = [
+				"[[mgr <vitesse>][mda <vitesse>][t <duree>]]",
+				"[[t 1000]]",
+			]
+
+			lcmd[0] = lcmd[0].replace(/<vitesse>/g, vitesse)
+			lcmd[0] = lcmd[0].replace(/<duree>/g, duree)
+
+			cmd(lcmd)
+		}
+
+		//////////////////////////// tourner_droite ////////////////////////
+
+		function tourner_droite(vitesse,duree) {
+			var lcmd = [
+				"[[mga <vitesse>][mdr <vitesse>][t <duree>]]",
+				"[[t 1000]]",
+			]
+
+			lcmd[0] = lcmd[0].replace(/<vitesse>/g, vitesse)
+			lcmd[0] = lcmd[0].replace(/<duree>/g, duree)
+
+			cmd(lcmd)
+		}
+
+
+		//////////////////////////// avancer_mur ////////////////////////
+
+		function avancer_mur(vitesse,duree) {
+			var lcmd = [
+				"[[s 90]]", // on prépostionne le servo //commande envoyé a l'arduino
+				["b0"], //instruction de controle
+				"[[mga <vitesse>][mda <vitesse>][t <duree>]]",     // on avance
+				"[[t 1000]]",                       // on attend l'arrêt du robot
+				"[[dd 90]]",    // on mesure la distance
+				["iterer si dist dir >", "b0", 90, 300],         // on itère tant que la distance est supérieure à 300 mm
+			]
+			
+			lcmd[2] = lcmd[2].replace(/<vitesse>/g, vitesse)
+			lcmd[2] = lcmd[2].replace(/<duree>/g, duree)
+
+			cmd(lcmd)
+		}          
+
+
+
+		//////////////////////////// distance_dir ////////////////////////
+
+		function distance_dir(dir) {
+			var lcmd = [
+				"[[dd "+dir+"]]",
+			]
+			cmd(lcmd)
+		}
+
+		//////////////////////////// distances180 ////////////////////////
+
+		function distances180(nb) {
+			var lcmd = [
+				"[[s 0][t 1000]]",
+				"[[dm "+nb+"]]",
+			]
+
+			cmd(lcmd)
+		}
+
+		//////////////////////////// servo ////////////////////////
+
+		function servo(dir) {
+			var lcmd = [
+			"[[s "+dir+"]]",
+			]
+
+			cmd(lcmd)
+		}
+		
+		
+		///////-----------NOS FONCTIONS----------/////
+		
+		function avancer_modif_droit(vitesse,duree){		
+			var lcmd = [
+				["b0"],
+				"[[t 200][dd 0]]",
+				["ma_dist1"],
+				["avancer vitesse vg vd"],
+				"[[t 200][dd 0]]",
+				["ma_dist2"],
+				["si distances differentes","b0",1] 
+			]
+			cmd(lcmd)
+		}
+		function longer_droit(vitesse){
+			var lcmd = [
+				"[[s 0]]",
+				["b1"],
+				["b0"],
+				"[[t 200][dd 0]]",
+				["ma_dist1"],
+				["avancer vitesse vg vd"],
+				"[[t 200][dd 0]]",
+				["ma_dist2"],
+				["si distances differentes","b0",1],
+				"[[mga 200][mda 200][t 1000]]",//avance
+				"[[t 1000]]",
+				["avancer vitesse","b1",4]
+
+			]
+			cmd(lcmd)
+		}
+		function tourner_90(){
+			var lcmd = [
+				"[[s 90]]",
+				["b0"], 
+				"[[mga 160][mda 160][t 500]]",  
+				"[[t 1000]]",                     
+				"[[dd 90]]",   
+				["iterer dir >", "b0", 90, 300], 
+
+				"[[mgr 200][mda 200][t 650]]",//tourne
+				"[[t 1000]]",  
+				"[[s 0]]",
+				["b0"],
+				"[[t 200][dd 0]]",
+				["ma_dist1"],
+				["avancer vitesse vg vd"],
+				"[[t 200][dd 0]]",
+				["ma_dist2"],
+				["si distances differentes","b0",1],
+				"[[mga 200][mda 200][t 1000]]",//avance
+				"[[t 1000]]"
+			]
+			cmd(lcmd)
+		}
+		///////--------------FIN DE NOS FONCTIONS--------------////////
+	</script>
+</head>
+<body>
+	<br><br>
+	Distances
+	<input type="checkbox" id="dist_on" value="dist_on" >
+	<span id="distances"></span>
+
+	<br><br>
+	<input type="submit" value="Servo" 
+		onclick="servo(document.getElementById('dir_servo').value)">
+	direction en degrés :
+	<input id="dir_servo" type="text" value="0" style="width: 3rem; ">
+	<input type="submit" value="+" onclick="incr('dir_servo',45)">
+	<input type="submit" value="-" onclick="incr('dir_servo',-45)">
+		
+
+	<br><br>
+	<input type="submit" value="Mesurer la distance dans la direction courante" 
+		onclick="distance_dir(document.getElementById('dir_servo').value)">
+
+	<br><br>
+	<input type="submit" value="Mesurer les distances sur 180°" 
+		onclick="distances180(document.getElementById('nb_mesures').value)">
+	nombre de mesures :
+	<input id="nb_mesures" type="text" value="5" style="width: 3rem; ">
+
+	<br><br>
+	<input type="submit" value="Avancer" 
+		onclick="avancer(document.getElementById('v_avancer').value,
+			document.getElementById('d_avancer').value)">
+	vitesse : <input id="v_avancer" type="text" value="80" style="width: 3rem; ">
+	<input type="submit" value="+" onclick="incr('v_avancer',10)">
+	<input type="submit" value="-" onclick="incr('v_avancer',-10)">
+	durée : <input id="d_avancer" type="text" value="1000" style="width: 3rem; "> ms
+	<input type="submit" value="+" onclick="incr('d_avancer',100)">
+	<input type="submit" value="-" onclick="incr('d_avancer',-100)">
+			
+	<br><br>
+	<input type="submit" value="Reculer" 
+	onclick="reculer(document.getElementById('v_reculer').value,
+		document.getElementById('d_reculer').value)">
+	vitesse : <input id="v_reculer" type="text" value="80" style="width: 3rem; ">
+	<input type="submit" value="+" onclick="incr('v_reculer',10)">
+	<input type="submit" value="-" onclick="incr('v_reculer',-10)">
+	durée : <input id="d_reculer" type="text" value="1000" style="width: 3rem; "> ms
+	<input type="submit" value="+" onclick="incr('d_reculer',100)">
+	<input type="submit" value="-" onclick="incr('d_reculer',-100)">
+
+	<br><br>
+	<input type="submit" value="Tourner vers la gauche" 
+	onclick="tourner_gauche(document.getElementById('v_tourner_g').value,
+		document.getElementById('d_tourner_g').value)">
+	vitesse : <input id="v_tourner_g" type="text" value="130" style="width: 3rem; ">
+	<input type="submit" value="+" onclick="incr('v_tourner_g',10)">
+	<input type="submit" value="-" onclick="incr('v_tourner_g',-10)">
+	durée : <input id="d_tourner_g" type="text" value="300" style="width: 3rem; "> ms
+	<input type="submit" value="+" onclick="incr('d_tourner_g',100)">
+	<input type="submit" value="-" onclick="incr('d_tourner_g',-100)">
+
+	<br><br>
+	<input type="submit" value="Tourner vers la droite" 
+	onclick="tourner_droite(document.getElementById('v_tourner_d').value,
+		document.getElementById('d_tourner_d').value)">
+	vitesse : <input id="v_tourner_d" type="text" value="130" style="width: 3rem; ">
+	<input type="submit" value="+" onclick="incr('v_tourner_d',10)">
+	<input type="submit" value="-" onclick="incr('v_tourner_d',-10)">
+	durée : <input id="d_tourner_d" type="text" value="300" style="width: 3rem; "> ms
+	<input type="submit" value="+" onclick="incr('d_tourner_d',100)">
+	<input type="submit" value="-" onclick="incr('d_tourner_d',-100)">
+
+	<br><br>
+	<input type="submit" value="Avancer jusqu'au mur par pas" 
+	onclick="avancer_mur(document.getElementById('v_avancer_mur').value,
+		document.getElementById('d_avancer_mur').value)">
+	vitesse : <input id="v_avancer_mur" type="text" value="80" style="width: 3rem; ">
+	<input type="submit" value="+" onclick="incr('v_avancer_mur',10)">
+	<input type="submit" value="-" onclick="incr('v_avancer_mur',-10)">
+	durée d'un pas : <input id="d_avancer_mur" type="text" value="1000" style="width: 3rem; "> ms
+	<input type="submit" value="+" onclick="incr('d_avancer_mur',100)">
+	<input type="submit" value="-" onclick="incr('d_avancer_mur',-100)">
+
+	<br><br>
+	<input type="submit" value="Aligner le robot sur le mur" onclick="avancer_modif_droit(160,1000)">
+
+	<br><br>
+	<input type="submit" value="Longer le mur" 
+		onclick="longer_droit(160)">
+
+	<br><br>
+	<input type="submit" value="Avancer jusqu'au mur, tourner de 90° puis longer le mur sur une courte distance" 
+		onclick="tourner_90()" >
+			
+	<br><br>
+	<input type="submit" value="Contourner un obstacle qui se trouve en face" 
+		onclick="alert('Cette commande n\'est pas gérée.\n\n')" >
+				
+	<br><br>
+	<input type="submit" value="Autre fonction" 
+		onclick="alert('Cette commande n\'est pas gérée.\n\nSujet libre.')" >
+						
+							
+
+</body>
+
+</html>
